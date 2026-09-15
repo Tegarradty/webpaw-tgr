@@ -1,0 +1,17 @@
+# Dependency Node.js — jangan di-push ke Git
+node_modules/
+
+# File yang diupload user — jangan di-push ke Git (bisa besar)
+uploads/*
+# Kecuali file .gitkeep untuk menjaga folder tetap ada
+!uploads/.gitkeep
+
+# Data JSON — boleh di-push agar data tidak hilang saat deploy ulang
+# data/files.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env

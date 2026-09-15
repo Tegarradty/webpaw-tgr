@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Upload File - WEB PAW TGR</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="container">
+
+    <!-- NAVBAR -->
+    <div class="container-navbar">
+        <ul class="ul-navbar">
+            <li class="li-navbar"><a href="drive.html" class="a-navbar">MY DRIVE</a></li>
+            <li class="li-navbar active"><a href="upload.html" class="a-navbar">UPLOAD</a></li>
+        </ul>
+    </div>
+
+    <!-- UPLOAD CONTENT -->
+    <div class="container-upload">
+        <div class="upload-card">
+            <h1 class="upload-title">Upload File</h1>
+            <p class="upload-subtitle">Simpan file kamu di sini</p>
+
+            <form class="upload-form" id="uploadForm">
+
+                <div class="form-group">
+                    <label class="form-label">Judul / Nama File</label>
+                    <input type="text" name="judul" class="form-input"
+                           placeholder="Contoh: Catatan PAW Pertemuan 3" required />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Kategori</label>
+                    <select name="kategori" class="form-input form-select" required>
+                        <option value="" disabled selected>Pilih Kategori...</option>
+                        <option value="PAW">Pemrograman Aplikasi Web (PAW)</option>
+                        <option value="Strukdat">Struktur Data</option>
+                        <option value="Alpro">Algoritma &amp; Pemrograman</option>
+                        <option value="Basis Data">Basis Data</option>
+                        <option value="Catatan">Catatan Pribadi</option>
+                        <option value="Referensi">Referensi / Materi</option>
+                        <option value="Lainnya">Lainnya</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Deskripsi <span style="color:#555;font-weight:normal;">(opsional)</span></label>
+                    <textarea name="deskripsi" class="form-input form-textarea"
+                              placeholder="Catatan singkat tentang file ini..." rows="2"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Pilih File</label>
+                    <div class="file-drop-area" id="dropArea"
+                         onclick="document.getElementById('fileInput').click()">
+                        <div class="file-drop-icon">&#11014;</div>
+                        <p class="file-drop-text">Klik atau drag &amp; drop file di sini</p>
+                        <p class="file-drop-hint">PDF, DOCX, PPTX, XLSX, ZIP, Gambar, Video (Maks. 100MB)</p>
+                        <input type="file" id="fileInput" name="file" style="display:none"
+                               accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.txt,.png,.jpg,.jpeg,.mp4,.mp3"
+                               onchange="showFileName(this)" required />
+                    </div>
+                    <p class="file-name-display" id="fileName"></p>
+                </div>
+
+                <!-- Progress bar -->
+                <div id="progressWrap" style="display:none;">
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="progressBar"></div>
+                    </div>
+                    <p class="progress-label" id="progressLabel">Mengupload...</p>
+                </div>
+
+                <div id="statusMsg" style="display:none;" class="status-msg"></div>
+
+                <div style="display:flex; gap:12px;">
+                    <button type="submit" class="btn-upload" id="btnSubmit">Upload File</button>
+                    <a href="drive.html" class="btn-drive">Lihat Drive</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="container-footer">
+        <h1 class="h1-footer">website ini dibuat sepenuh hati</h1>
+    </div>
+</div>
+
+<script>
+// Deteksi otomatis base URL — berjalan di localhost maupun hosting manapun
+const API_URL = window.location.origin + "/api";
+
+function showFileName(input) {
+    const file = input.files[0];
+    const display = document.getElementById("fileName");
+    if (file) {
+        const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+        display.textContent = "File: " + file.name + " (" + sizeMB + " MB)";
+        display.style.color = "#85D8F6";
+    }
+}
+
+// Drag & Drop
+const dropArea = document.getElementById("dropArea");
+dropArea.addEventListener("dragover", e => {
+    e.preventDefault();
+    dropArea.style.borderColor = "#85D8F6";
+    dropArea.style.background  = "rgba(133,216,246,0.1)";
+});
+dropArea.addEventListener("dragleave", () => {
+    dropArea.style.borderColor = "#1A565F";
+    dropArea.style.background  = "rgba(255,255,255,0.03)";
+});
+dropArea.addEventListener("drop", e => {
+    e.preventDefault();
+    dropArea.style.borderColor = "#1A565F";
+    dropArea.style.background  = "rgba(255,255,255,0.03)";
+    document.getElementById("fileInput").files = e.dataTransfer.files;
+    showFileName(document.getElementById("fileInput"));
+});
+
+// Upload with progress
+document.getElementById("uploadForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+    const btn  = document.getElementById("btnSubmit");
+    const form = e.target;
+
+    btn.disabled    = true;
+    btn.textContent = "Mengupload...";
+
+    const progressWrap  = document.getElementById("progressWrap");
+    const progressBar   = document.getElementById("progressBar");
+    const progressLabel = document.getElementById("progressLabel");
+    progressWrap.style.display = "block";
+    progressBar.style.width    = "0%";
+
+    const formData = new FormData(form);
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.addEventListener("progress", e => {
+        if (e.lengthComputable) {
+            const pct = Math.round((e.loaded / e.total) * 100);
+            progressBar.style.width = pct + "%";
+            progressLabel.textContent = "Mengupload... " + pct + "%";
+        }
+    });
+
+    xhr.addEventListener("load", () => {
+        progressWrap.style.display = "none";
+        btn.disabled    = false;
+        btn.textContent = "Upload File";
+        try {
+            const json = JSON.parse(xhr.responseText);
+            if (json.success) {
+                showStatus("File berhasil diupload! Redirect ke Drive...", "success");
+                form.reset();
+                document.getElementById("fileName").textContent = "";
+                setTimeout(() => { window.location.href = "drive.html"; }, 1500);
+            } else {
+                showStatus("Gagal: " + json.message, "error");
+            }
+        } catch {
+            showStatus("Terjadi error server.", "error");
+        }
+    });
+
+    xhr.addEventListener("error", () => {
+        progressWrap.style.display = "none";
+        btn.disabled    = false;
+        btn.textContent = "Upload File";
+        showStatus("Tidak bisa terhubung ke server. Pastikan server berjalan!", "error");
+    });
+
+    xhr.open("POST", API_URL + "/upload");
+    xhr.send(formData);
+});
+
+function showStatus(msg, type) {
+    const el = document.getElementById("statusMsg");
+    el.textContent   = msg;
+    el.className     = "status-msg " + (type === "success" ? "status-success" : "status-error");
+    el.style.display = "block";
+}
+</script>
+</body>
+</html>
