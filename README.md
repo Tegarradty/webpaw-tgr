@@ -1,136 +1,140 @@
 # WEB PAW TGR — Personal Drive
 
-Web personal drive sederhana berbasis **Node.js + Express** dengan frontend HTML/CSS/JS murni.
-Fitur utama: upload, preview, download, edit, dan hapus file lewat browser.
+Web personal drive sederhana berbasis **HTML + CSS + JavaScript murni** (tanpa server/backend).
+File disimpan di **localStorage browser**. Bisa di-hosting di GitHub Pages secara gratis.
+
+🌐 **Live:** [pawpaw.click](https://pawpaw.click)
+📁 **Repo:** [github.com/Tegarradty/webpaw-tgr](https://github.com/Tegarradty/webpaw-tgr)
 
 ---
 
 ## 📁 Struktur Folder
 
 ```
-CODING/
+webpaw-tgr/
 │
-├── server.js            # Backend utama — Express server + semua API endpoint
-├── package.json         # Konfigurasi npm & daftar dependency
-├── package-lock.json    # Lock file dependency (jangan diedit manual)
+├── drive.html      # Halaman utama My Drive (list, preview, edit, hapus file)
+├── upload.html     # Halaman upload file baru
+├── index.html      # Redirect otomatis ke drive.html
+├── style.css       # Semua styling (navbar, drive, upload form, modal)
 │
-├── drive.html           # Halaman utama My Drive (list file, preview, edit, hapus)
-├── upload.html          # Halaman upload file baru
-├── index.html           # Redirect otomatis ke drive.html
-│
-├── style.css            # Semua styling (navbar, drive layout, upload form, modal)
-│
-├── data/
-│   └── files.json       # "Database" JSON — menyimpan metadata file yang diupload
-│
-├── uploads/             # Folder fisik tempat file yang diupload disimpan
-│
-└── node_modules/        # Dependency npm (jangan di-commit ke git)
+├── .gitignore      # File yang diabaikan Git
+└── README.md       # Dokumentasi ini
+```
+
+> ⚠️ Tidak ada `server.js` — project ini **100% static**, tidak butuh Node.js untuk jalan.
+
+---
+
+## 🚀 Cara Buka di Lokal (Tanpa Install Apapun)
+
+Cukup buka file langsung di browser:
+```
+Klik 2x → drive.html
+```
+Atau pakai ekstensi **Live Server** di VS Code untuk auto-refresh.
+
+---
+
+## ✏️ Cara Update / Ubah Kode
+
+Setiap kali kamu ubah file (HTML/CSS/JS), jalankan **3 perintah ini** di PowerShell:
+
+```powershell
+git add .
+git commit -m "update: tulis apa yang kamu ubah"
+git push
+```
+
+GitHub Pages otomatis deploy ulang dalam **~1-2 menit**. Selesai! ✅
+
+### Contoh pesan commit yang bagus:
+```powershell
+git commit -m "tambah kategori: Matematika"
+git commit -m "fix: perbaiki tampilan di HP"
+git commit -m "update: ganti warna navbar"
 ```
 
 ---
 
-## 🚀 Cara Menjalankan (Lokal)
+## 🗂️ Cara Kerja Penyimpanan (localStorage)
 
-### 1. Install dependency
-```bash
-npm install
-```
+| Fitur | Cara Kerja |
+|-------|-----------|
+| Upload file | File dibaca sebagai base64 lalu disimpan di `localStorage` browser |
+| Lihat file | Dibaca dari `localStorage` dan ditampilkan |
+| Download | Dibuat dari data base64 yang tersimpan |
+| Hapus | Dihapus dari `localStorage` |
 
-### 2. Jalankan server
-```bash
-npm start
-# atau
-node server.js
-```
+**Key localStorage:** `webpaw_files` (array JSON)
 
-### 3. Buka browser
-```
-http://localhost:3000
-```
-Otomatis redirect ke halaman **My Drive**.
+> ⚠️ **Batasan:** File hanya tersimpan di browser yang dipakai upload. Buka dari HP/browser lain = kosong. Batas ukuran file ~5MB per file.
 
 ---
 
-## 🌐 Cara Deploy ke Hosting
+## 🛠️ Cara Menambah Fitur
 
-Project ini siap di-deploy ke platform seperti **Railway**, **Render**, atau **Fly.io**.
+### Tambah kategori baru
+Edit di **2 tempat**:
 
-### Yang sudah dipersiapkan:
-- `server.js` membaca `process.env.PORT` secara otomatis (wajib untuk hosting)
-- URL API di frontend menggunakan `window.location.origin` (tidak hardcoded)
-- Folder `uploads/` dan `data/` dibuat otomatis saat server start
+1. `upload.html` — tambah `<option>` baru:
+```html
+<option value="NamaKategori">Nama Kategori Tampilan</option>
+```
 
-### Langkah deploy ke Railway (contoh):
-1. Push project ke GitHub (pastikan `.gitignore` mengecualikan `node_modules/`)
-2. Buat project baru di [railway.app](https://railway.app)
-3. Connect ke repo GitHub
-4. Railway otomatis mendeteksi `npm start` sebagai start command
-5. Selesai — URL hosting langsung bisa dipakai
-
-> **Catatan:** File yang diupload tersimpan di folder `uploads/` di server.
-> Jika platform hosting menggunakan **ephemeral storage** (file terhapus saat redeploy),
-> pertimbangkan menggunakan layanan cloud storage seperti AWS S3 atau Cloudinary di masa depan.
-
----
-
-## 🔌 API Endpoints
-
-| Method | Endpoint | Fungsi |
-|--------|----------|--------|
-| `GET` | `/api/files` | Ambil semua file (support `?q=`, `?kategori=`, `?sort=`) |
-| `GET` | `/api/stats` | Statistik storage (jumlah file, total ukuran) |
-| `POST` | `/api/upload` | Upload file baru (multipart/form-data) |
-| `PATCH` | `/api/files/:id` | Edit judul/kategori/deskripsi file |
-| `DELETE` | `/api/files/:id` | Hapus file (dari DB dan disk) |
-
----
-
-## 📦 Dependency
-
-| Package | Versi | Fungsi |
-|---------|-------|--------|
-| `express` | ^4.18.2 | Web framework / HTTP server |
-| `multer` | ^1.4.5-lts.1 | Handle upload file (multipart) |
-| `cors` | ^2.8.5 | Mengizinkan cross-origin request |
-
----
-
-## 🛠️ Cara Update / Menambah Fitur
-
-### Menambah kategori baru
-Edit dua tempat:
-1. **`upload.html`** — tambah `<option>` baru di dalam `<select name="kategori">`
-2. **`drive.html`** — tambah key baru di `KATEGORI_ICONS` (objek di dalam `<script>`)
-
-### Menambah tipe file yang didukung
-Edit dua tempat:
-1. **`server.js`** — tambah ekstensi ke array `allowed` di `fileFilter`
-2. **`server.js`** — tambah mapping ekstensi ke tipe di `getFileType()`
-3. **`drive.html`** — tambah key baru di `FILE_ICONS` untuk tampilan icon & warna
-4. **`upload.html`** — tambah ekstensi ke atribut `accept` pada `<input type="file">`
-
-### Mengubah batas ukuran file
-Edit di `server.js`:
+2. `drive.html` — tambah di objek `KATEGORI_ICONS`:
 ```js
-limits: { fileSize: 100 * 1024 * 1024 }, // Ganti 100 dengan angka MB yang diinginkan
+"NamaKategori": "&#128218;",  // ganti emoji sesuai selera
 ```
 
-### Mengubah tampilan / styling
-Semua style ada di `style.css`. File diorganisir dengan komentar bagian:
-- `/* ===== NAVBAR ===== */`
-- `/* ===== UPLOAD PAGE ===== */`
+### Tambah tipe file baru
+Edit di **2 tempat** di `drive.html`:
+
+1. Objek `FILE_ICONS` — tambah tampilan icon & warna
+2. Fungsi `getFileType()` di `upload.html` — tambah mapping ekstensi
+
+### Ubah batas ukuran file
+Di `upload.html`, baris:
+```js
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // ganti 5 dengan MB yang diinginkan
+```
+
+### Ubah tampilan / warna
+Semua ada di `style.css`, diorganisir dengan komentar:
+- `/* NAVBAR */`
+- `/* UPLOAD PAGE */`
 - `/* DRIVE PAGE */`
-- `/* --- MODAL --- */`
+- `/* MODAL */`
 
 ---
 
-## ⚠️ Catatan Penting
+## 🌐 Info Hosting
 
-- **`data/files.json`** adalah "database" sederhana. Jangan hapus file ini atau data file akan hilang.
-- **`uploads/`** menyimpan file fisik. Backup folder ini secara berkala.
-- Jika ingin menjalankan di port berbeda: `PORT=8080 node server.js`
+| Item | Detail |
+|------|--------|
+| Platform | GitHub Pages (gratis) |
+| Domain | pawpaw.click (Hostinger) |
+| DNS | 4x A record → IP GitHub Pages |
+| HTTPS | Otomatis dari GitHub Pages |
+
+### Kalau mau ganti domain:
+1. GitHub → Settings → Pages → Custom domain → ganti domain
+2. DNS provider → update A record ke IP baru
 
 ---
 
-*Dibuat sepenuh hati oleh TGR*
+## 🔄 Alur Kerja Sehari-hari
+
+```
+Edit kode di PC
+      ↓
+git add . && git commit -m "..." && git push
+      ↓
+GitHub Pages auto-deploy (~1-2 menit)
+      ↓
+pawpaw.click langsung terupdate ✅
+```
+
+---
+
+*Dibuat sepenuh hati oleh TGR* 🚀
