@@ -12,7 +12,7 @@
     <!-- NAVBAR -->
     <div class="container-navbar">
         <ul class="ul-navbar">
-            <li class="li-navbar"><a href="drive.html" class="a-navbar">MY DRIVE</a></li>
+            <li class="li-navbar active"><a href="drive.html" class="a-navbar">MY DRIVE</a></li>
             <li class="li-navbar"><a href="upload.html" class="a-navbar">UPLOAD</a></li>
         </ul>
     </div>
@@ -65,7 +65,7 @@
             </div>
 
             <!-- Stats bar -->
-            <div class="drive-stats-bar" id="statsBar">
+            <div class="drive-stats-bar">
                 <span id="statFiles">-- file</span>
                 <span class="stats-dot">&#183;</span>
                 <span id="statSize">-- MB</span>
@@ -137,8 +137,7 @@
 </div>
 
 <script>
-// Deteksi otomatis base URL — berjalan di localhost maupun hosting manapun
-const API = window.location.origin + "/api";
+const STORAGE_KEY = "webpaw_files";
 
 let allFiles = [];
 let currentView     = "grid";
@@ -165,40 +164,40 @@ const KATEGORI_ICONS = {
   "Referensi":"&#128218;", "Lainnya":"&#128193;",
 };
 
-// ============ LOAD DATA ============
-async function loadAll() {
+// ============ LOAD DATA dari localStorage ============
+function loadAll() {
   try {
-    const [filesRes, statsRes] = await Promise.all([
-      fetch(API + "/files"),
-      fetch(API + "/stats"),
-    ]);
-    const filesJson = await filesRes.json();
-    const statsJson = await statsRes.json();
-
-    if (filesJson.success) {
-      allFiles = filesJson.data;
-      buildSidebar(statsJson);
-      renderFiles();
-      updateStatsBar(statsJson);
-    }
+    const raw = localStorage.getItem(STORAGE_KEY);
+    allFiles = raw ? JSON.parse(raw) : [];
   } catch {
-    document.getElementById("fileContainer").innerHTML =
-      '<div class="drive-error">Tidak bisa terhubung ke server.<br>Jalankan: <code>node server.js</code></div>';
+    allFiles = [];
   }
+  buildSidebar();
+  renderFiles();
+  updateStats();
 }
 
-function buildSidebar(stats) {
+function saveAll() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(allFiles));
+}
+
+function formatSize(bytes) {
+  if (!bytes) return "0 B";
+  const k = 1024;
+  const sizes = ["B","KB","MB","GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+}
+
+function buildSidebar() {
   const ul = document.getElementById("sidebarKategori");
-  const totalCount = allFiles.length;
-  document.getElementById("count-semua").textContent = totalCount;
+  document.getElementById("count-semua").textContent = allFiles.length;
 
-  // Kumpulkan kategori unik
-  const cats = {};
-  allFiles.forEach(f => { cats[f.kategori] = (cats[f.kategori] || 0) + 1; });
-
-  // Hapus item lama kecuali "Semua"
   const items = ul.querySelectorAll("li:not(:first-child)");
   items.forEach(i => i.remove());
+
+  const cats = {};
+  allFiles.forEach(f => { cats[f.kategori] = (cats[f.kategori] || 0) + 1; });
 
   Object.entries(cats).sort().forEach(([cat, count]) => {
     const li = document.createElement("li");
@@ -210,17 +209,18 @@ function buildSidebar(stats) {
     ul.appendChild(li);
   });
 
-  // Storage bar (anggap max 1GB)
-  const MAX = 1 * 1024 * 1024 * 1024;
-  const pct = Math.min(((stats.totalSizeBytes || 0) / MAX) * 100, 100).toFixed(1);
+  // Storage bar — estimasi localStorage usage
+  const totalSize = allFiles.reduce((sum, f) => sum + (f.fileSize || 0), 0);
+  const MAX = 5 * 1024 * 1024; // estimasi 5MB
+  const pct = Math.min((totalSize / MAX) * 100, 100).toFixed(1);
   document.getElementById("storageBar").style.width = pct + "%";
-  document.getElementById("storageLabel").textContent =
-    (stats.totalSize || "0 B") + " / 1 GB";
+  document.getElementById("storageLabel").textContent = formatSize(totalSize) + " / ~5 MB";
 }
 
-function updateStatsBar(stats) {
-  document.getElementById("statFiles").textContent = (stats.totalFiles || 0) + " file";
-  document.getElementById("statSize").textContent  = stats.totalSize || "0 B";
+function updateStats() {
+  const totalSize = allFiles.reduce((sum, f) => sum + (f.fileSize || 0), 0);
+  document.getElementById("statFiles").textContent = allFiles.length + " file";
+  document.getElementById("statSize").textContent  = formatSize(totalSize);
 }
 
 // ============ RENDER FILES ============
@@ -271,14 +271,14 @@ function renderFiles() {
 function fileCard(f) {
   const { icon, color } = FILE_ICONS[f.fileType] || FILE_ICONS.other;
   return `
-    <div class="file-card" ondblclick="previewFile(${f.id})">
+    <div class="file-card" ondblclick="previewFile('${f.id}')">
       <div class="file-card-icon" style="color:${color}">${icon}</div>
       <div class="file-card-name" title="${escHtml(f.judul)}">${escHtml(f.judul)}</div>
       <div class="file-card-meta">${escHtml(f.kategori)} &middot; ${f.fileSizeStr || "?"}</div>
       <div class="file-card-actions">
-        ${f.filePath ? `<a href="${f.filePath}" download="${escHtml(f.fileName)}" class="btn-card-action" title="Download">&#11123;</a>` : ""}
-        <button class="btn-card-action" onclick="openEdit(${f.id})" title="Edit">&#9998;</button>
-        <button class="btn-card-action btn-card-del" onclick="deleteFile(${f.id})" title="Hapus">&#128465;</button>
+        ${f.fileData ? `<button class="btn-card-action" onclick="downloadFile('${f.id}')" title="Download">&#11123;</button>` : ""}
+        <button class="btn-card-action" onclick="openEdit('${f.id}')" title="Edit">&#9998;</button>
+        <button class="btn-card-action btn-card-del" onclick="deleteFile('${f.id}')" title="Hapus">&#128465;</button>
       </div>
     </div>`;
 }
@@ -289,15 +289,15 @@ function fileRow(f) {
     <tr>
       <td>
         <span style="color:${color};margin-right:8px;">${icon}</span>
-        <span class="file-row-name" ondblclick="previewFile(${f.id})">${escHtml(f.judul)}</span>
+        <span class="file-row-name" ondblclick="previewFile('${f.id}')">${escHtml(f.judul)}</span>
       </td>
       <td><span class="badge-kategori">${escHtml(f.kategori)}</span></td>
       <td>${f.fileSizeStr || "?"}</td>
       <td>${f.waktu}</td>
       <td class="file-row-actions">
-        ${f.filePath ? `<a href="${f.filePath}" download="${escHtml(f.fileName)}" class="btn-card-action" title="Download">&#11123;</a>` : ""}
-        <button class="btn-card-action" onclick="openEdit(${f.id})" title="Edit">&#9998;</button>
-        <button class="btn-card-action btn-card-del" onclick="deleteFile(${f.id})" title="Hapus">&#128465;</button>
+        ${f.fileData ? `<button class="btn-card-action" onclick="downloadFile('${f.id}')" title="Download">&#11123;</button>` : ""}
+        <button class="btn-card-action" onclick="openEdit('${f.id}')" title="Edit">&#9998;</button>
+        <button class="btn-card-action btn-card-del" onclick="deleteFile('${f.id}')" title="Hapus">&#128465;</button>
       </td>
     </tr>`;
 }
@@ -305,20 +305,20 @@ function fileRow(f) {
 // ============ PREVIEW ============
 function previewFile(id) {
   const f = allFiles.find(x => x.id === id);
-  if (!f || !f.filePath) return;
+  if (!f || !f.fileData) return;
+
   document.getElementById("modalTitle").textContent = f.judul;
-  document.getElementById("modalDownload").href     = f.filePath;
-  document.getElementById("modalDownload").setAttribute("download", f.fileName);
+  document.getElementById("modalDownload").onclick = (e) => { e.preventDefault(); downloadFile(id); };
 
   let bodyHtml = "";
-  if (f.fileType === "pdf") {
-    bodyHtml = `<iframe src="${f.filePath}" class="preview-iframe"></iframe>`;
-  } else if (f.fileType === "image") {
-    bodyHtml = `<img src="${f.filePath}" class="preview-img" alt="${escHtml(f.judul)}" />`;
+  if (f.fileType === "image") {
+    bodyHtml = `<img src="${f.fileData}" class="preview-img" alt="${escHtml(f.judul)}" />`;
+  } else if (f.fileType === "pdf") {
+    bodyHtml = `<iframe src="${f.fileData}" class="preview-iframe"></iframe>`;
   } else if (f.fileType === "video") {
-    bodyHtml = `<video src="${f.filePath}" class="preview-video" controls></video>`;
+    bodyHtml = `<video src="${f.fileData}" class="preview-video" controls></video>`;
   } else if (f.fileType === "audio") {
-    bodyHtml = `<audio src="${f.filePath}" controls style="width:100%;margin-top:20px;"></audio>`;
+    bodyHtml = `<audio src="${f.fileData}" controls style="width:100%;margin-top:20px;"></audio>`;
   } else {
     bodyHtml = `<div class="preview-nopreview">
       <div style="font-size:60px;">&#128196;</div>
@@ -338,6 +338,16 @@ function closePreviewBtn() {
   document.getElementById("modalBody").innerHTML = "";
 }
 
+// ============ DOWNLOAD ============
+function downloadFile(id) {
+  const f = allFiles.find(x => x.id === id);
+  if (!f || !f.fileData) return;
+  const a = document.createElement("a");
+  a.href     = f.fileData;
+  a.download = f.fileName || f.judul;
+  a.click();
+}
+
 // ============ EDIT ============
 function openEdit(id) {
   const f = allFiles.find(x => x.id === id);
@@ -353,36 +363,31 @@ function closeEditModal(e) {
   if (e.target.id === "editModal") document.getElementById("editModal").style.display = "none";
 }
 
-async function saveEdit() {
-  const id      = parseInt(document.getElementById("editId").value);
-  const judul   = document.getElementById("editJudul").value.trim();
+function saveEdit() {
+  const id       = document.getElementById("editId").value;
+  const judul    = document.getElementById("editJudul").value.trim();
   const kategori = document.getElementById("editKategori").value;
   const deskripsi = document.getElementById("editDeskripsi").value;
 
   if (!judul) { alert("Judul tidak boleh kosong!"); return; }
 
-  const res  = await fetch(API + "/files/" + id, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ judul, kategori, deskripsi }),
-  });
-  const json = await res.json();
-  if (json.success) {
-    document.getElementById("editModal").style.display = "none";
-    loadAll();
-  } else {
-    alert("Gagal: " + json.message);
-  }
+  const idx = allFiles.findIndex(f => f.id === id);
+  if (idx === -1) return;
+  allFiles[idx].judul    = judul;
+  allFiles[idx].kategori = kategori;
+  allFiles[idx].deskripsi = deskripsi;
+  saveAll();
+  document.getElementById("editModal").style.display = "none";
+  loadAll();
 }
 
 // ============ DELETE ============
-async function deleteFile(id) {
+function deleteFile(id) {
   const f = allFiles.find(x => x.id === id);
   if (!confirm("Hapus file \"" + (f ? f.judul : id) + "\"? Aksi ini tidak bisa dibatalkan!")) return;
-  const res  = await fetch(API + "/files/" + id, { method: "DELETE" });
-  const json = await res.json();
-  if (json.success) { loadAll(); }
-  else { alert("Gagal menghapus: " + json.message); }
+  allFiles = allFiles.filter(f => f.id !== id);
+  saveAll();
+  loadAll();
 }
 
 // ============ FILTER / SORT / SEARCH ============
